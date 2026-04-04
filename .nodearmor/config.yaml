@@ -1,0 +1,27 @@
+# NodeArmor Configuration
+# ========================
+# Place this file at .nodearmor/config.yaml in your repository root.
+# All fields are optional — override defaults for your environment.
+
+# API key (prefer env var NODEARMOR_API_KEY over storing here)
+# api_key: "na_your_key_here"
+
+# Policy Engine endpoint (override for private cloud deployments)
+api_url: "https://node-armor-enforcement.replit.app/api/evaluate"
+
+# Severity threshold — block on this level and above (LOW | MEDIUM | HIGH | CRITICAL)
+severity_threshold: "HIGH"
+
+# Authorized registries — source of truth for provenance checks
+authorized_registries:
+  - "registry.npmjs.org"
+  - "pypi.org"
+  - "files.pythonhosted.org"
+  - "registry.federal.gov"
+  - "ghcr.io"
+
+# SBOM format expected (cyclonedx | spdx | auto)
+sbom_format: "auto"
+
+# Notify on block (webhook URL or leave blank)
+notify_webhook: ""
