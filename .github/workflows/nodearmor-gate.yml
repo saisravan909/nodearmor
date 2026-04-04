@@ -1,0 +1,43 @@
+name: NodeArmor Supply Chain Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  nodearmor-gate:
+    name: Zero Trust Enforcement Gate
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run NodeArmor Gate
+        id: gate
+        env:
+          NODEARMOR_API_KEY: ${{ secrets.NODEARMOR_API_KEY }}
+        run: |
+          python3 enforce.py \
+            --package "${{ github.repository }}@${{ github.sha }}" \
+            --registry "https://github.com/${{ github.repository }}"
+
+      - name: PASS — Build Authorized
+        if: success()
+        run: echo "NodeArmor gate cleared. Build authorized to proceed."
+
+      - name: BLOCK — Hard Stop
+        if: failure()
+        run: |
+          echo "::error title=NodeArmor Gate Blocked::Supply chain violation detected. Build rejected."
+          exit 1
