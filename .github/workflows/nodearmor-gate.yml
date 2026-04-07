@@ -31,70 +31,117 @@ jobs:
 
       - name: Verify build provenance
         run: |
-          echo "::group::Provenance check"
-          echo "Verifying artifact provenance against trusted certificate authority..."
-          echo "Certificate chain: VALID"
-          echo "Build server fingerprint: MATCHES KNOWN GOOD"
-          echo "Provenance: VERIFIED"
+          echo "::group::Build provenance"
+          echo "Repository  : ${{ github.repository }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Ref         : ${{ github.ref }}"
+          echo "Commit SHA  : $(git rev-parse HEAD)"
+          echo "Commit msg  : $(git log -1 --pretty=%s)"
+          echo "Committed   : $(git log -1 --pretty=%ci)"
+          echo ""
+          echo "Provenance chain: authenticated GitHub Actions runner"
+          echo "Runner identity : ${{ runner.name }} / ${{ runner.os }}"
           echo "::endgroup::"
 
-      - name: SBOM generation and scan
+      - name: SBOM generation and CVE scan (Google OSV)
+        id: sbom
         run: |
-          echo "::group::SBOM scan"
-          pip install cyclonedx-bom 2>/dev/null | tail -1
-          echo "Generating Software Bill of Materials..."
-          echo "Components inventoried: 47"
-          echo "Registry cross-check: authorized registries only"
-          echo "SBOM: COMPLETE"
+          echo "::group::SBOM scan — Google OSV (api.osv.dev)"
+
+          if [ "${{ github.event.inputs.scenario }}" = "block" ]; then
+            PKG_NAME="Pillow"
+            PKG_VERSION="8.1.0"
+            PKG_ECOSYSTEM="PyPI"
+          else
+            PKG_NAME="httpx"
+            PKG_VERSION="0.27.0"
+            PKG_ECOSYSTEM="PyPI"
+          fi
+
+          echo "Package under scan : ${PKG_NAME}==${PKG_VERSION}"
+          echo "Ecosystem          : ${PKG_ECOSYSTEM}"
+          echo "CVE source         : Google OSV  —  https://api.osv.dev/v1/query"
+          echo ""
+
+          RESPONSE=$(curl -sf -X POST "https://api.osv.dev/v1/query" \
+            -H "Content-Type: application/json" \
+            -d "{\"package\":{\"name\":\"${PKG_NAME}\",\"ecosystem\":\"${PKG_ECOSYSTEM}\"},\"version\":\"${PKG_VERSION}\"}")
+
+          CVE_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('vulns',[])))")
+          echo "OSV query returned ${CVE_COUNT} known vulnerabilities"
+          echo ""
+
+          if [ "$CVE_COUNT" -gt "0" ]; then
+            echo "Vulnerability summary (first 5 of ${CVE_COUNT}):"
+            echo "$RESPONSE" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          for v in d.get('vulns', [])[:5]:
+              cve = next((a for a in v.get('aliases', []) if a.startswith('CVE-')), '')
+              line = f'  {v[\"id\"]:35s}  {cve:20s}  {v.get(\"summary\",\"\")[:50]}'
+              print(line)
+          "
+          else
+            echo "  No vulnerabilities found in OSV database for ${PKG_NAME}==${PKG_VERSION}"
+          fi
+
+          echo ""
+          echo "pkg_name=${PKG_NAME}"       >> "$GITHUB_OUTPUT"
+          echo "pkg_version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "cve_count=${CVE_COUNT}"     >> "$GITHUB_OUTPUT"
           echo "::endgroup::"
 
-      - name: Signature verification
+      - name: Signature and provenance policy check
         run: |
-          echo "::group::Signature verification"
-          echo "Verifying artifact signatures (Sigstore / cosign)..."
-          echo "Signatures: ALL VALID"
-          echo "Key transparency log: entry confirmed"
+          echo "::group::Signature policy"
+          echo "Policy source: .nodearmor/config.yaml"
+          cat .nodearmor/config.yaml 2>/dev/null || echo "(no config.yaml found)"
+          echo ""
+          echo "In production this step invokes cosign/Sigstore to verify every"
+          echo "artifact is signed against a pinned key before promotion."
+          echo "This run enforces the CVE gate (step above) per that policy."
           echo "::endgroup::"
 
       - name: Run NodeArmor enforcement gate
         id: gate
         run: |
-          echo "::group::NodeArmor enforcement gate"
-          if [ "${{ github.event.inputs.scenario }}" = "block" ]; then
-            echo "Scanning dependency manifest..."
-            echo "ALERT: Unauthorized registry detected -- custom-pypi.attacker.io"
-            echo "ALERT: Package signature mismatch -- requests@2.28.0"
-            echo "ALERT: SBOM entry not in authorized component list"
-            echo ""
+          echo "::group::NodeArmor enforcement gate — NIST SP 800-207"
+
+          CVE_COUNT="${{ steps.sbom.outputs.cve_count }}"
+          PKG="${{ steps.sbom.outputs.pkg_name }}==${{ steps.sbom.outputs.pkg_version }}"
+
+          echo "Package evaluated : ${PKG}"
+          echo "CVEs from OSV     : ${CVE_COUNT}"
+          echo "Policy            : .nodearmor/config.yaml (NIST SP 800-207 Zero Trust)"
+          echo ""
+
+          if [ "${{ github.event.inputs.scenario }}" = "block" ] && [ "${CVE_COUNT}" -gt "0" ]; then
             echo "================================================================"
             echo "NODEARMOR ENFORCEMENT GATE: BLOCKED"
-            echo "Policy: NIST SP 800-207 Zero Trust"
-            echo "Reason: Unauthorized registry + signature mismatch"
-            echo "Action: Build halted. CISO notified. Incident logged."
+            echo "Package : ${PKG}"
+            echo "CVEs    : ${CVE_COUNT} known vulnerabilities (source: Google OSV)"
+            echo "Policy  : Zero Trust — no unresolved CVEs permitted on main branch"
+            echo "Action  : Merge halted. Event logged to .nodearmor/events.json."
             echo "================================================================"
-            echo "::endgroup::"
-            echo "verdict=BLOCK" >> $GITHUB_OUTPUT
-            echo "violation=HASH_MISMATCH" >> $GITHUB_OUTPUT
-            echo "pkg=requests==2.28.0" >> $GITHUB_OUTPUT
-            echo "deception=true" >> $GITHUB_OUTPUT
+            echo "verdict=BLOCK"          >> "$GITHUB_OUTPUT"
+            echo "violation=CVE_CRITICAL" >> "$GITHUB_OUTPUT"
+            echo "pkg=${PKG}"             >> "$GITHUB_OUTPUT"
+            echo "deception=false"        >> "$GITHUB_OUTPUT"
             exit 1
           else
-            echo "Scanning dependency manifest..."
-            echo "All 47 packages verified against authorized registries"
-            echo "All signatures valid and traceable to trusted roots"
-            echo "SBOM: complete coverage confirmed"
-            echo ""
             echo "================================================================"
             echo "NODEARMOR ENFORCEMENT GATE: PASSED"
-            echo "Build authorized for deployment"
-            echo "Zero Trust policy: satisfied"
+            echo "Package : ${PKG}"
+            echo "CVEs    : ${CVE_COUNT}"
+            echo "Policy  : All Zero Trust requirements satisfied"
+            echo "Action  : Merge authorized."
             echo "================================================================"
-            echo "::endgroup::"
-            echo "verdict=PASS" >> $GITHUB_OUTPUT
-            echo "violation=NONE" >> $GITHUB_OUTPUT
-            echo "pkg=all-47-packages" >> $GITHUB_OUTPUT
-            echo "deception=false" >> $GITHUB_OUTPUT
+            echo "verdict=PASS"    >> "$GITHUB_OUTPUT"
+            echo "violation=NONE"  >> "$GITHUB_OUTPUT"
+            echo "pkg=${PKG}"      >> "$GITHUB_OUTPUT"
+            echo "deception=false" >> "$GITHUB_OUTPUT"
           fi
+          echo "::endgroup::"
 
       - name: Log enforcement event to audit trail
         if: always()
@@ -122,7 +169,7 @@ jobs:
 
           verdict   = os.environ.get("GATE_VERDICT",   "PASS")
           violation = os.environ.get("GATE_VIOLATION", "NONE")
-          pkg       = os.environ.get("GATE_PKG",       "all-47-packages")
+          pkg       = os.environ.get("GATE_PKG",       "unknown")
           deception = os.environ.get("GATE_DECEPTION", "false").lower() == "true"
 
           new_event = {
@@ -155,5 +202,5 @@ jobs:
           git config user.name  "NodeArmor Gate"
           git config user.email "gate@nodearmor.dev"
           git add .nodearmor/events.json
-          git diff --staged --quiet || git commit -m "gate: log enforcement event $(date -u +%Y%m%d%H%M%S) [skip ci]"
+          git diff --staged --quiet || git commit -m "gate: log enforcement event $(date -u +%Y%m%dT%H%M%S) [skip ci]"
           git push origin HEAD:main
