@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/saisravan909/nodearmor-enforcement-gate/main/assets/logo.png" width="900" alt="NodeArmor — Zero Trust Software Supply Chain Gate"/>
+<img src="https://raw.githubusercontent.com/saisravan909/nodearmor-enforcement-gate/main/assets/logo.png" width="900" alt="NodeArmor: Zero Trust Software Supply Chain Gate"/>
 
 <br/>
 
@@ -55,18 +55,18 @@
 
 ## What Makes NodeArmor Different
 
-> In 2020, attackers compromised SolarWinds' build pipeline. Malicious code was cryptographically signed, trusted by every security tool on the market, and shipped to 18,000 organizations — including the Pentagon. Nobody caught it for 266 days.
+> In 2020, attackers compromised SolarWinds' build pipeline. Malicious code was cryptographically signed, trusted by every security tool on the market, and shipped to 18,000 organizations, including the Pentagon. Nobody caught it for 266 days.
 >
 > Not because people weren't watching. Because **the pipeline itself was the weapon.**
 
-Most security tools are passive observers. They scan. They generate reports. They wait for a human to act. Under pressure, during a live deployment, at 2am — humans make mistakes.
+Most security tools are passive observers. They scan. They generate reports. They wait for a human to act. Under pressure, during a live deployment, at 2am. Humans make mistakes.
 
 NodeArmor removes the human from that decision entirely.
 
 | | Legacy Security Tools | NodeArmor |
 |---|:---:|:---:|
 | **Approach** | Scan and report | Enforce and decide |
-| **Requires Human Review** | Yes — always | No — gate decides |
+| **Requires Human Review** | Yes, always | No, gate decides |
 | **Detection Time** | 24–72 hours | Under 30 seconds |
 | **Response to Threat** | Alert sent | Pipeline locked |
 | **SBOM Enforcement** | Manual | Automated, per EO 14028 |
@@ -99,8 +99,8 @@ flowchart TD
 
     I & J & K & L & M --> N{Decision}
 
-    N -->|All clear| O([✓ PASS — Build authorized\npipeline continues])
-    N -->|Violation detected| P([✗ BLOCK — Hard stop\npipeline exits 1])
+    N -->|All clear| O([✓ PASS: Build authorized\npipeline continues])
+    N -->|Violation detected| P([✗ BLOCK: Hard stop\npipeline exits 1])
 
     style O fill:#166534,color:#fff,stroke:#16a34a
     style P fill:#991b1b,color:#fff,stroke:#dc2626
@@ -114,7 +114,7 @@ flowchart TD
 
 ```mermaid
 graph LR
-    subgraph PUBLIC["🔓 Public — This Repository"]
+    subgraph PUBLIC["🔓 Public: This Repository"]
         direction TB
         EP["enforce.py\nThin client shell\nFully auditable"]
         AP["auth.py\nAPI key management"]
@@ -122,7 +122,7 @@ graph LR
         GH[".github/workflows/\nCI/CD integration"]
     end
 
-    subgraph ENGINE["🔒 Private — Policy Engine (Managed Service)"]
+    subgraph ENGINE["🔒 Private: Policy Engine (Managed Service)"]
         direction TB
         PE["Policy Engine\nNIST 800-207 evaluation"]
         SA["SBOM Analyzer\nCycloneDX + SPDX"]
@@ -141,7 +141,7 @@ graph LR
 
 - **The client (this repo)** is fully auditable. Anyone can read every line of `enforce.py` and verify exactly what data is collected and sent. There is no hidden behavior.
 - **The engine (private)** contains the policy logic, threat intelligence, and deception layer. It cannot be reverse-engineered by adversaries because it never runs on their infrastructure.
-- This is the same model used by Semgrep, Snyk, and HashiCorp Sentinel — trusted by the federal community.
+- This is the same model used by Semgrep, Snyk, and HashiCorp Sentinel, trusted by the federal community.
 
 ---
 
@@ -151,7 +151,7 @@ graph LR
 
 - Python 3.10 or higher
 - A NodeArmor API key (`NODEARMOR_API_KEY`)
-- No other dependencies — pure Python stdlib
+- No other dependencies: pure Python stdlib
 
 ### 1. Clone the repo
 
@@ -192,13 +192,13 @@ python3 enforce.py \
 
   Submitting to NodeArmor Policy Engine ...
 
-    [✓] Provenance verified — authorized registry confirmed
+    [✓] Provenance verified: authorized registry confirmed
     [✓] Signature matches federal baseline
-    [✓] SBOM analyzed — 1 component, no threats detected
+    [✓] SBOM analyzed: 1 component, no threats detected
     [✓] NIST 800-207 alignment verified
 
   ╔══════════════════════════════════════════════════════╗
-  ║  ✓  GATE PASSED — Build authorized to proceed       ║
+  ║  ✓  GATE PASSED: Build authorized to proceed        ║
   ╚══════════════════════════════════════════════════════╝
 ```
 
@@ -218,12 +218,12 @@ python3 enforce.py \
 
     [✗] Unauthorized registry detected
          'malicious-registry.example.com' is not in the federal approved list
-    [✗] Signature mismatch — artifact may be tampered
+    [✗] Signature mismatch: artifact may be tampered
          SHA-256 does not match federal baseline. Possible supply chain compromise.
-    [✗] SBOM absent — dependency provenance unknown
+    [✗] SBOM absent: dependency provenance unknown
 
   ╔══════════════════════════════════════════════════════╗
-  ║  ✗  GATE BLOCKED — Hard stop. Build rejected.       ║
+  ║  ✗  GATE BLOCKED: Hard stop. Build rejected.        ║
   ╚══════════════════════════════════════════════════════╝
 ```
 
@@ -277,7 +277,7 @@ jobs:
             --package "${{ github.repository }}@${{ github.sha }}" \
             --registry "https://github.com/${{ github.repository }}"
 
-      - name: BLOCK — Hard Stop
+      - name: BLOCK. Hard Stop.
         if: failure()
         run: |
           echo "::error title=NodeArmor Gate Blocked::Supply chain violation detected."
@@ -299,11 +299,11 @@ Add your API key to **Settings → Secrets → Actions** as `NODEARMOR_API_KEY`.
 # Policy Engine endpoint
 api_url: "https://node-armor-enforcement.replit.app/api/evaluate"
 
-# Severity threshold — block on this level and above
+# Severity threshold: block on this level and above
 # Options: LOW | MEDIUM | HIGH | CRITICAL
 severity_threshold: "HIGH"
 
-# Authorized package registries — provenance source of truth
+# Authorized package registries: provenance source of truth
 authorized_registries:
   - "registry.npmjs.org"
   - "pypi.org"
@@ -369,33 +369,33 @@ Every enforcement decision is mapped to the Zero Trust Architecture standard:
 
 | Pillar | NIST Control | NodeArmor Check |
 |--------|-------------|-----------------|
-| **Identity** | §2.1 — Resource Authorization | Registry provenance verification |
-| **Device** | §2.2 — Device Integrity | Build environment posture |
-| **Network** | §2.3 — Data-in-Transit Integrity | Artifact signature validation |
-| **Application Workload** | §2.4 — Least-Privilege Access | Dependency scope enforcement |
-| **Data** | §2.5 — Data Classification | SBOM completeness and accuracy |
-| **Visibility** | §2.6 — Continuous Monitoring | Immutable audit log on every evaluation |
+| **Identity** | §2.1: Resource Authorization | Registry provenance verification |
+| **Device** | §2.2: Device Integrity | Build environment posture |
+| **Network** | §2.3: Data-in-Transit Integrity | Artifact signature validation |
+| **Application Workload** | §2.4: Least-Privilege Access | Dependency scope enforcement |
+| **Data** | §2.5: Data Classification | SBOM completeness and accuracy |
+| **Visibility** | §2.6: Continuous Monitoring | Immutable audit log on every evaluation |
 
 Additionally compliant with:
-- **EO 14028** §4(e) — SBOM requirement for all federal software
-- **SSDF (SP 800-218)** — Secure Software Development Framework
-- **CMMC 2.0** — Level 2 and Level 3 supply chain controls
+- **EO 14028** §4(e): SBOM requirement for all federal software
+- **SSDF (SP 800-218)**: Secure Software Development Framework
+- **CMMC 2.0**: Level 2 and Level 3 supply chain controls
 
 ---
 
 ## Sector Use Cases
 
 <details>
-<summary><strong>01 — Federal Agencies: Software Supply Chain Security</strong></summary>
+<summary><strong>01: Federal Agencies: Software Supply Chain Security</strong></summary>
 
-Federal agencies face FISMA, FedRAMP, and EO 14028 requirements simultaneously. NodeArmor enforces SBOM collection, signature verification, and authorized registry checks on every build — automatically satisfying the supply chain security requirements without additional tooling or procurement.
+Federal agencies face FISMA, FedRAMP, and EO 14028 requirements simultaneously. NodeArmor enforces SBOM collection, signature verification, and authorized registry checks on every build, automatically satisfying the supply chain security requirements without additional tooling or procurement.
 
 [Full write-up →](use-cases/01-federal-agency-supply-chain/)
 
 </details>
 
 <details>
-<summary><strong>02 — Defense Contractors: CMMC Alignment</strong></summary>
+<summary><strong>02: Defense Contractors: CMMC Alignment</strong></summary>
 
 CMMC 2.0 Level 2 and 3 require documented supply chain risk management. NodeArmor provides immutable audit trails for every build decision, satisfying AC.2.007, CM.2.061, and SI.1.210 controls.
 
@@ -404,7 +404,7 @@ CMMC 2.0 Level 2 and 3 require documented supply chain risk management. NodeArmo
 </details>
 
 <details>
-<summary><strong>03 — Critical Infrastructure: ICS/OT Protection</strong></summary>
+<summary><strong>03: Critical Infrastructure: ICS/OT Protection</strong></summary>
 
 Industrial control systems require deterministic, low-latency security decisions. NodeArmor's binary PASS/BLOCK outcome integrates with OT pipelines without adding human-in-the-loop latency.
 
@@ -413,7 +413,7 @@ Industrial control systems require deterministic, low-latency security decisions
 </details>
 
 <details>
-<summary><strong>04 — Red Team / Purple Team: Adversarial Testing</strong></summary>
+<summary><strong>04: Red Team / Purple Team: Adversarial Testing</strong></summary>
 
 NodeArmor's deception layer actively captures TTPs from red team exercises, generating real threat intelligence rather than simply blocking the attack.
 
@@ -422,7 +422,7 @@ NodeArmor's deception layer actively captures TTPs from red team exercises, gene
 </details>
 
 <details>
-<summary><strong>05 — Government Software Vendors: FedRAMP</strong></summary>
+<summary><strong>05: Government Software Vendors: FedRAMP</strong></summary>
 
 ISVs selling to federal agencies need to demonstrate supply chain security as part of FedRAMP authorization. NodeArmor's audit logs and NIST 800-207 alignment directly support the authorization package.
 
@@ -431,7 +431,7 @@ ISVs selling to federal agencies need to demonstrate supply chain security as pa
 </details>
 
 <details>
-<summary><strong>06 — Enterprise CI/CD: DevSecOps Integration</strong></summary>
+<summary><strong>06: Enterprise CI/CD: DevSecOps Integration</strong></summary>
 
 NodeArmor drops into any GitHub Actions, GitLab CI, Jenkins, or CircleCI pipeline without reconfiguring the existing workflow. One file, one secret, enforced on every run.
 
@@ -440,7 +440,7 @@ NodeArmor drops into any GitHub Actions, GitLab CI, Jenkins, or CircleCI pipelin
 </details>
 
 <details>
-<summary><strong>07 — Healthcare: HIPAA Supply Chain Compliance</strong></summary>
+<summary><strong>07: Healthcare: HIPAA Supply Chain Compliance</strong></summary>
 
 Healthcare organizations face OCR guidance requiring software supply chain security for systems processing PHI. NodeArmor's SBOM enforcement and dependency risk scoring directly addresses HIPAA §164.308(a)(1) Security Management requirements.
 
@@ -449,7 +449,7 @@ Healthcare organizations face OCR guidance requiring software supply chain secur
 </details>
 
 <details>
-<summary><strong>08 — Financial Services: SOC 2 + PCI DSS</strong></summary>
+<summary><strong>08: Financial Services: SOC 2 + PCI DSS</strong></summary>
 
 Financial institutions under PCI DSS 4.0 and SOC 2 Type II audits require documented change management and software integrity controls. NodeArmor's immutable audit trail satisfies both.
 
@@ -479,9 +479,9 @@ sequenceDiagram
     ENGINE->>LOG: Immutable audit entry
     ENGINE->>CLIENT: Decision + findings
     alt PASS
-        CLIENT->>DEV: Exit 0 — Build authorized
+        CLIENT->>DEV: Exit 0. Build authorized.
     else BLOCK
-        CLIENT->>DEV: Exit 1 — Hard stop
+        CLIENT->>DEV: Exit 1. Hard stop.
     end
 ```
 
@@ -497,7 +497,7 @@ sequenceDiagram
 }
 ```
 
-Nothing else. No source code. No secrets. No repository contents. You can verify this by reading `enforce.py` — the entire payload construction is visible on lines 101–109.
+Nothing else. No source code. No secrets. No repository contents. You can verify this by reading `enforce.py`. The entire payload construction is visible on lines 101–109.
 
 ---
 
@@ -519,7 +519,7 @@ Nothing else. No source code. No secrets. No repository contents. You can verify
 <details>
 <summary><strong>Why is the policy engine private?</strong></summary>
 
-The same reason Snyk's vulnerability database and Semgrep's rule engine are not open source. If the enforcement logic is public, sophisticated adversaries can test their payload against it offline until it passes. The client (this repo) is fully auditable — you can verify every byte sent to the API. The engine that processes it runs in an environment you cannot access, which is the point.
+The same reason Snyk's vulnerability database and Semgrep's rule engine are not open source. If the enforcement logic is public, sophisticated adversaries can test their payload against it offline until it passes. The client (this repo) is fully auditable. You can verify every byte sent to the API. The engine that processes it runs in an environment you cannot access, which is the point.
 
 </details>
 
@@ -547,7 +547,7 @@ Yes. NodeArmor is language-agnostic. Any package with a name, version, and regis
 <details>
 <summary><strong>What happens if the Policy Engine is unreachable?</strong></summary>
 
-By design, NodeArmor **fails closed** — if the engine cannot be reached within 15 seconds, the gate returns `BLOCK`. A failed connection does not result in an unverified build proceeding. This is a Zero Trust requirement: never assume authorization; always verify.
+By design, NodeArmor **fails closed**: if the engine cannot be reached within 15 seconds, the gate returns `BLOCK`. A failed connection does not result in an unverified build proceeding. This is a Zero Trust requirement: never assume authorization; always verify.
 
 </details>
 
@@ -564,7 +564,7 @@ NodeArmor is licensed under BSL 1.1. It is free for evaluation and non-productio
 
 ```
 nodearmor/
-├── enforce.py                    # Enforcement gate client — the entry point
+├── enforce.py                    # Enforcement gate client: the entry point
 ├── auth.py                       # API key management utility
 ├── .nodearmor/
 │   └── config.yaml               # Policy configuration schema
@@ -602,7 +602,7 @@ NodeArmor follows responsible disclosure. We respond within 72 hours and coordin
 ### Built to be shared, not sold.
 
 *There is nothing to buy to get started. No license to negotiate. No vendor to call.*
-*The problem is real — and the solution should be available to anyone who needs it.*
+*The problem is real, and the solution should be available to anyone who needs it.*
 
 <br/>
 
