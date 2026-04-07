@@ -12,6 +12,9 @@ on:
           - pass
           - block
 
+permissions:
+  contents: write
+
 jobs:
   supply-chain-gate:
     runs-on: ubuntu-latest
@@ -54,6 +57,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Run NodeArmor enforcement gate
+        id: gate
         run: |
           echo "::group::NodeArmor enforcement gate"
           if [ "${{ github.event.inputs.scenario }}" = "block" ]; then
@@ -69,6 +73,10 @@ jobs:
             echo "Action: Build halted. CISO notified. Incident logged."
             echo "================================================================"
             echo "::endgroup::"
+            echo "verdict=BLOCK" >> $GITHUB_OUTPUT
+            echo "violation=HASH_MISMATCH" >> $GITHUB_OUTPUT
+            echo "pkg=requests==2.28.0" >> $GITHUB_OUTPUT
+            echo "deception=true" >> $GITHUB_OUTPUT
             exit 1
           else
             echo "Scanning dependency manifest..."
@@ -82,4 +90,70 @@ jobs:
             echo "Zero Trust policy: satisfied"
             echo "================================================================"
             echo "::endgroup::"
+            echo "verdict=PASS" >> $GITHUB_OUTPUT
+            echo "violation=NONE" >> $GITHUB_OUTPUT
+            echo "pkg=all-47-packages" >> $GITHUB_OUTPUT
+            echo "deception=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Log enforcement event to audit trail
+        if: always()
+        env:
+          GATE_VERDICT:   ${{ steps.gate.outputs.verdict }}
+          GATE_VIOLATION: ${{ steps.gate.outputs.violation }}
+          GATE_PKG:       ${{ steps.gate.outputs.pkg }}
+          GATE_DECEPTION: ${{ steps.gate.outputs.deception }}
+        run: |
+          python3 /dev/stdin << 'PYEOF'
+          import json, os, datetime
+
+          events_path = ".nodearmor/events.json"
+          timestamp   = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+          run_id      = os.environ.get("GITHUB_RUN_ID", "unknown")
+
+          if os.path.exists(events_path):
+              with open(events_path) as f:
+                  data = json.load(f)
+          else:
+              data = {"events": [], "total": 0, "blocked_total": 0, "last_updated": timestamp}
+
+          events  = data.get("events", [])
+          next_id = len(events) + 1
+
+          verdict   = os.environ.get("GATE_VERDICT",   "PASS")
+          violation = os.environ.get("GATE_VIOLATION", "NONE")
+          pkg       = os.environ.get("GATE_PKG",       "all-47-packages")
+          deception = os.environ.get("GATE_DECEPTION", "false").lower() == "true"
+
+          new_event = {
+              "event_id":  f"EVT-{next_id:04d}",
+              "timestamp": timestamp,
+              "pkg":       pkg,
+              "violation": violation,
+              "verdict":   verdict,
+              "deception": deception,
+              "scenario":  "block" if verdict == "BLOCK" else "pass",
+              "run_id":    run_id,
+          }
+          events.append(new_event)
+
+          data["events"]        = events
+          data["total"]         = len(events)
+          data["blocked_total"] = sum(1 for e in events if e["verdict"] == "BLOCK")
+          data["last_updated"]  = timestamp
+
+          os.makedirs(".nodearmor", exist_ok=True)
+          with open(events_path, "w") as f:
+              json.dump(data, f, indent=2)
+
+          print(f"Logged {new_event['event_id']}: {verdict} | {violation} | {pkg}")
+          PYEOF
+
+      - name: Commit and push audit log
+        if: always()
+        run: |
+          git config user.name  "NodeArmor Gate"
+          git config user.email "gate@nodearmor.dev"
+          git add .nodearmor/events.json
+          git diff --staged --quiet || git commit -m "gate: log enforcement event $(date -u +%Y%m%d%H%M%S) [skip ci]"
+          git push origin HEAD:main
