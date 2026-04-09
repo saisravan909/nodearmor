@@ -319,9 +319,19 @@
       "deception": false,
       "scenario": "pass",
       "run_id": "24194845619"
+    },
+    {
+      "event_id": "EVT-0033",
+      "timestamp": "2026-04-09T14:38:50Z",
+      "pkg": "httpx==0.27.0",
+      "violation": "NONE",
+      "verdict": "PASS",
+      "deception": false,
+      "scenario": "pass",
+      "run_id": "24196172218"
     }
   ],
-  "total": 32,
+  "total": 33,
   "blocked_total": 19,
-  "last_updated": "2026-04-09T14:11:31Z"
+  "last_updated": "2026-04-09T14:38:50Z"
 }
