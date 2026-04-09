@@ -259,9 +259,19 @@
       "deception": false,
       "scenario": "pass",
       "run_id": "24166965739"
+    },
+    {
+      "event_id": "EVT-0027",
+      "timestamp": "2026-04-09T01:06:35Z",
+      "pkg": "Pillow==8.1.0",
+      "violation": "CVE_CRITICAL",
+      "verdict": "BLOCK",
+      "deception": false,
+      "scenario": "block",
+      "run_id": "24167011935"
     }
   ],
-  "total": 26,
-  "blocked_total": 18,
-  "last_updated": "2026-04-09T01:04:58Z"
+  "total": 27,
+  "blocked_total": 19,
+  "last_updated": "2026-04-09T01:06:35Z"
 }
