@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/saisravan909/nodearmor-enforcement-gate/main/assets/logo.png" width="900" alt="NodeArmor: Zero Trust Software Supply Chain Gate"/>
+<img src="https://raw.githubusercontent.com/saisravan909/nodearmor/main/assets/logo.png" width="900" alt="NodeArmor: Zero Trust Software Supply Chain Gate"/>
 
 <br/>
 
