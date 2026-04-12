@@ -399,9 +399,19 @@
       "deception": false,
       "scenario": "block",
       "run_id": "24307441083"
+    },
+    {
+      "event_id": "EVT-0041",
+      "timestamp": "2026-04-12T13:43:21Z",
+      "pkg": "Pillow==8.1.0",
+      "violation": "CVE_CRITICAL",
+      "verdict": "BLOCK",
+      "deception": false,
+      "scenario": "block",
+      "run_id": "24308095765"
     }
   ],
-  "total": 40,
-  "blocked_total": 23,
-  "last_updated": "2026-04-12T13:06:24Z"
+  "total": 41,
+  "blocked_total": 24,
+  "last_updated": "2026-04-12T13:43:21Z"
 }
